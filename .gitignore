@@ -1,2 +1,4 @@
+.env
+store.sqlite
 conf.js
 node_modules
