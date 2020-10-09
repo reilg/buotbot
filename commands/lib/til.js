@@ -4,40 +4,49 @@ const { Store } = require('./store')
 class Til {
   constructor() {
     this.timers = new Store('timers')
+    this.modes = ['season', 'hell']
+  }
+
+  async setTimer(type, date) {
+    let start = DateTime.fromISO(date)
+    let end = start.plus({ days: 5 })
+
+    if (![ 'season', 'hell' ].includes(type)) {
+      return 'fail'
+    }
+
+    await this.timers.set(type, { start: start, end: end })
+    return start.toISODate()
   }
 
   async getTimer(type) {
-    let season = await this.timers.get(type)
-    if (!season) {
-      return null
-    }
-    return season
+    return this.timers.get(type)
   }
 
-  async setSeasonTimer(date) {
-    let start = DateTime.fromISO(date)
-    let end = start.plus({ days: 5 })
-    this.timers.set('season', { start: start, end: end })
-    return 'Season started at: ' + start.toLocaleString()
+  async getDiff(start, end, type) {
+    return start.diff(end)
   }
 
-  async _get() {
+  async getTimers() {
     let out = {}
 
-    let types = ['season', 'hell']
-    for (const type of types) {
-      let tmr = await this.getTimer(type);
-      if (!tmr) {
-        out[type] = "Timer needs to be set first:\n```!timer {1} YYYY-MM-DD```".replace("{1}", type)
+    for (const type of this.modes) {
+      let t = await this.getTimer(type);
+      if (!t) {
+        out[type] = ""
         continue
       }
 
-      let end = DateTime.fromISO(tmr.end)
+      let start = DateTime.fromISO(t.start)
+      let end = DateTime.fromISO(t.end)
       let now = DateTime.local()
 
-      let diff = end.diff(now, ['days', 'hours', 'minutes'])
-        .toFormat("d 'days,' h 'hours, and' m 'minutes'")
-      out[type] = "```bash\n{1}```".replace("{1}", diff)
+      let diff = await this.getDiff(end, now, type)
+      // let diff = end.diff(now, ['days', 'hours', 'minutes'])
+      // if (diff.day < 0) {
+      //   let {start, end} = await this.reset(type)
+      // }
+      out[type] = diff.toFormat("d 'days,' h 'hours, and' m 'minutes'")
     }
 
     return this.embed(out)
@@ -45,7 +54,7 @@ class Til {
 
   getAll() {
     try {
-      return this._get()
+      return this.getTimers()
     } catch(err) {
       console.log(err)
       return this.error(err)
@@ -58,19 +67,20 @@ class Til {
       "fields": [
         {
           "name": "Season Reset",
-          "value": timers.season,
+          "value": timers.season || "No timer set",
         },
         {
           "name": "Hell Reset",
-          "value": timers.hell,
+          "value": timers.hell || "No timer set",
         }
       ]
     }
   }
 
-  error(err) {
-    console.log('err', err)
-    return 'error - check logs'
+  async error(err) {
+    const errStore = new Store('errors')
+    await errStore.set(DateTime.local(), err)
+    return 'error getting timers - check with dev'
   }
 }
 
