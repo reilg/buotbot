@@ -1,34 +1,70 @@
+const { DateTime } = require('luxon')
 const { Store } = require('./store')
 
 class Timer {
-  modes = [ 'season', 'hell' ]
-  length = {
-    season: 5,
-    hell: 9,
+  #store
+
+  constructor() {
+    this.#store = new Store('timers')
   }
-  constructor(mode) {
-    switch (mode) {
+
+  get length() {
+    switch (this.mode) {
       case 'season':
+        return 5+1
       case 'hell':
-        this.mode = mode
-        break
-      default:
-        throw Error('mode not supported')
-        break
+        return 10+1
+    }
+  }
+
+  get store() {
+    return this.#store
+  }
+
+  get timers() {
+    return {
+      start: this.start.toISODate(),
+      end: this.end.toISODate(),
+    }
+  }
+
+  get reset() {
+    return this.diff.toFormat("d 'days,' h 'hours, and' m 'minutes'")
+  }
+
+  async set(date) {
+    this.start = DateTime.fromISO(date)
+    this.end = this.start.plus({ day: this.length })
+
+    await this.store.set(this.mode, {
+      start: this.start.toISODate(),
+      end: this.end.toISODate()
+    })
+
+    return this.getDiff()
+  }
+
+  async get(mode) {
+    this.mode = mode
+    let { start, end } = await this.store.get(mode) || { start: null, end: null }
+
+    this.start = DateTime.fromISO(start)
+    this.end = DateTime.fromISO(end)
+
+    return this.getDiff()
+  }
+
+  async getDiff() {
+    this.diff = this.end.diff(DateTime.local())
+    if (this.diff.as('days') < 0) {
+      await this.set(this.end.toISODate())
+      return this.getDiff()
     }
 
-    this.store = new Store(mode)
+    return this
   }
-
-  async get() {
-    await this.store.get(this.mode)
-  }
-
-  set() {}
-
-  reset() {}
 }
 
 module.exports = {
-  Timer: Timer
+  timer: new Timer()
 }
