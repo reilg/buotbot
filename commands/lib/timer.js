@@ -1,5 +1,7 @@
-const { DateTime } = require('luxon')
+const { DateTime, Settings } = require('luxon')
 const { Store } = require('./store')
+
+Settings.defaultZoneName = 'UTC+8'
 
 class Timer {
   #store
@@ -55,8 +57,7 @@ class Timer {
   }
 
   async getDiff() {
-    let now = DateTime.local().setZone('UTC+8')
-    this.diff = this.end.diff(now)
+    this.diff = this.end.diff(DateTime.local())
     if (this.diff.as('days') < 0) {
       await this.set(this.end.toISODate())
       return this.getDiff()
