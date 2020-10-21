@@ -55,7 +55,8 @@ class Timer {
   }
 
   async getDiff() {
-    this.diff = this.end.diff(DateTime.local())
+    let now = DateTime.local().setZone('UTC+8')
+    this.diff = this.end.diff(now)
     if (this.diff.as('days') < 0) {
       await this.set(this.end.toISODate())
       return this.getDiff()
