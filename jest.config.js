@@ -1,3 +1,4 @@
 module.exports = {
-  testPathIgnorePatterns: ["/legacy/"]
+  testPathIgnorePatterns: ["/legacy/"],
+  verbose: true,
 }
